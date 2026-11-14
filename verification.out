@@ -1,0 +1,23 @@
+=== id user1 ===
+uid=1234(user1) gid=1002(students) groups=1002(students)
+=== chage ===
+Last password change					: ноя 14, 2026
+Password expires					: фев 12, 2027
+Password inactive					: never
+Account expires						: never
+Minimum number of days between password change		: 0
+Maximum number of days between password change		: 90
+Number of days of warning before password expires	: 7
+=== students ===
+students:x:1002:user1
+=== sudo -l -U user1 ===
+Matching Defaults entries for user1 on Ubuntu:
+    env_reset, mail_badpass,
+    secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin\:/snap/bin,
+    use_pty
+
+User user1 may run the following commands on Ubuntu:
+    (root) NOPASSWD: /usr/bin/date -s *, /usr/bin/timedatectl set-time *
+=== utility modes ===
+-rwsr-xr-x 4755 root:root /home/player/cat-suid
+-rwxr-xr-x 755 root:root /home/player/chown-cap

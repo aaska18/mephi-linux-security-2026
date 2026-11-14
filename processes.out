@@ -1,0 +1,7 @@
+   2702    2693  1000     0 root     fusermount3     fusermount3 -o rw,nosuid,nodev,fsname=portal,auto_unmount,subtype=portal -- /run/user/1000/doc
+  10087   10069  1001     0 root     fusermount3     fusermount3 -o rw,nosuid,nodev,fsname=portal,auto_unmount,subtype=portal -- /run/user/1001/doc
+  10580    3438  1000     0 root     su              su - player
+  10926   10664  1001     0 root     sudo            sudo su
+  10927   10926  1001     0 root     sudo            sudo su
+  11085   11084  1001     0 root     sudo            sudo bash -s
+  11148   11146  1234     0 root     passwd          passwd

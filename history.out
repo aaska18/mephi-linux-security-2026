@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+set -u
+set -o pipefail
+ART=/home/player/dz-artifacts
+mkdir -p "$ART"
+chmod 700 "$ART"
+
+getent group students >/dev/null || groupadd students
+if getent passwd user1 >/dev/null; then
+  usermod -u 1234 user1 2>/dev/null || true
+else
+  useradd -m -u 1234 -s /bin/bash -g students user1
+fi
+usermod -aG students user1
+chage -M 90 -W 7 user1
+install -d -m 700 -o user1 -g students /home/user1
+
+install -m 0755 /bin/cat /home/player/cat-suid
+printf '%s\n' 'setuid demonstration secret for M265211' > /root/setuid-secret
+chmod 600 /root/setuid-secret
+chown root:root /home/player/cat-suid
+chmod 4755 /home/player/cat-suid
+runuser -u user1 -- /home/player/cat-suid /root/setuid-secret > "$ART/setuid-result.out" 2>&1
+
+if ! command -v setcap >/dev/null 2>&1; then
+  apt-get update -qq && apt-get install -y -qq libcap2-bin
+fi
+install -m 0755 /usr/bin/chown /home/player/chown-cap
+chown root:root /home/player/chown-cap
+setcap cap_chown+ep /home/player/chown-cap
+touch /home/player/cap-target
+chown user1:students /home/player/cap-target
+runuser -u player -- /home/player/chown-cap root:root /home/player/cap-target > "$ART/cap-result.out" 2>&1
+stat -c '%U:%G %n' /home/player/cap-target >> "$ART/cap-result.out"
+
+cat > /etc/sudoers.d/user1-time <<'EOF'
+user1 ALL=(root) NOPASSWD: /usr/bin/date -s *, /usr/bin/timedatectl set-time *
+EOF
+chmod 440 /etc/sudoers.d/user1-time
+visudo -cf /etc/sudoers.d/user1-time > "$ART/sudoers-check.out" 2>&1
+NOW=$(date '+%Y-%m-%d %H:%M:%S')
+runuser -u user1 -- sudo -n /usr/bin/date -s "$NOW" > "$ART/time-result.out" 2>&1 || true
+
+find / -xdev -type f -perm -4000 -printf '%p\n' 2>/dev/null | sort > "$ART/setuid-files.out"
+
+mkfifo /tmp/m265211-pwpipe
+tail -f /dev/null > /tmp/m265211-pwpipe &
+FEED=$!
+sudo -u user1 passwd < /tmp/m265211-pwpipe > "$ART/passwd-session.out" 2>&1 &
+PW=$!
+sleep 2
+ps -eo pid=,ppid=,ruid=,euid=,user=,comm=,args= | awk '$3 != 0 && $4 == 0' > "$ART/processes.out"
+kill "$PW" "$FEED" 2>/dev/null || true
+rm -f /tmp/m265211-pwpipe
+
+history > /home/player/history.out 2>&1 || true
+stat /home/user1 > /home/player/stat.out
+stat /home/player/cat-suid >> /home/player/stat.out
+stat /home/player/chown-cap >> /home/player/stat.out
+getcap /home/player/cat-suid /home/player/chown-cap > /home/player/getcap.out 2>&1
+cp /etc/passwd "$ART/passwd"
+cp /etc/shadow "$ART/shadow"
+cp /etc/group "$ART/group"
+cp /etc/sudoers "$ART/sudoers"
+cp /home/player/history.out "$ART/history.out"
+cp /home/player/stat.out "$ART/stat.out"
+cp /home/player/getcap.out "$ART/getcap.out"
+
+{
+  echo '=== id user1 ==='; id user1
+  echo '=== chage ==='; chage -l user1
+  echo '=== students ==='; getent group students
+  echo '=== sudo -l -U user1 ==='; sudo -l -U user1
+  echo '=== utility modes ==='; stat -c '%A %a %U:%G %n' /home/player/cat-suid /home/player/chown-cap
+} > "$ART/verification.out" 2>&1
+
+chown -R player:player "$ART"
+chmod 600 "$ART/shadow"
+echo DONE
